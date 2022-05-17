@@ -1,17 +1,18 @@
+import { argsToArgsConfig } from "graphql/type/definition";
 import { extendType, objectType, nonNull, stringArg, intArg, idArg } from "nexus";
+import { resolveImportPath } from "nexus/dist/utils";
 import { NexusGenObjects } from "../../nexus-typegen";
-import { NexusObjectTypeDef } from "nexus/dist/core";
 
 export const Link = objectType({
-    name: "Link",
-    definition(t) {
-        t.nonNull.int("id");
-        t.nonNull.string("description");
-        t.nonNull.string("url");
+    name: "Link", // defines name of type
+    definition(t) { // inside definition, add diff fields to type
+        t.nonNull.int("id"); // type Int named Id
+        t.nonNull.string("description"); // type String name description
+        t.nonNull.string("url"); // type String name url
     },
 });
 
-let links: NexusGenObjects["Link"][] = [
+let links: NexusGenObjects["Link"][] = [ // defines links as list of Link objects
     {
         id: 1,
         url: "www.howtographql.com",
@@ -24,17 +25,33 @@ let links: NexusGenObjects["Link"][] = [
     },
 ];
 
-export const LinkQuery = extendType({
-    type: "Query",
+export const LinkQuery = extendType({ // extending root type Query and adding root field called feed
+    type: "Query", // the root type being extended
     definition(t) {
-        t.nonNull.list.nonNull.field("feed", {
-            type: "Link",
+        t.nonNull.list.nonNull.field("feed", { // "feed" is new root field. non nullable array of link type objects
+            type: "Link", // type of objects in field
             resolve(parent, args, context, info) {
                 return links;
             },
         });
     },
 });
+
+export const SingleLinkQuery = extendType({
+    type: "Query",
+    definition(t) {
+        t.field("link", {
+            type: "Link",
+            description: "A Single Link",
+            args: {
+                id: "Int"
+            },
+            resolve(parent, args) {
+                return links.find(link => link.id === args.id)
+            }
+        })
+    }
+})
 
 export const LinkMutation = extendType({
     type: "Mutation",
@@ -62,25 +79,4 @@ export const LinkMutation = extendType({
     },
 });
 
-// const getLink(id: string): NexusObjectTypeDef => {
 
-// }
-
-// export const SingleLinkQuery = extendType({
-//     type: "Query",
-//     definition(t) {
-//         t.nonNull.field("link", {
-//             type: "Link",
-//             args: {
-//                 id: nonNull(stringArg({
-//                     description: "id of Link"
-//                 })),
-//             },
-
-//             resolve(_, { id }) => getLink(id), {
-
-//                 return links
-//             }
-//         })
-//     }
-// })

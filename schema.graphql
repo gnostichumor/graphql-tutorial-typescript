@@ -14,4 +14,7 @@ type Mutation {
 
 type Query {
   feed: [Link!]!
+
+  """A Single Link"""
+  link(id: Int): Link
 }
