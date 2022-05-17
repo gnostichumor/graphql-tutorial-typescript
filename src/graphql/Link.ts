@@ -1,5 +1,6 @@
 import { argsToArgsConfig } from "graphql/type/definition";
 import { extendType, objectType, nonNull, stringArg, intArg, idArg } from "nexus";
+import { MaybePromise } from "nexus/dist/core";
 import { resolveImportPath } from "nexus/dist/utils";
 import { NexusGenObjects } from "../../nexus-typegen";
 
@@ -46,7 +47,7 @@ export const SingleLinkQuery = extendType({
             args: {
                 id: "Int"
             },
-            resolve(parent, args) {
+            resolve(parent, args): MaybePromise<any> {
                 return links.find(link => link.id === args.id)
             }
         })
