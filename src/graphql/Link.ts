@@ -12,18 +12,6 @@ export const Link = objectType({
     },
 });
 
-let links: NexusGenObjects["Link"][] = [ // defines links as list of Link objects
-    {
-        id: 1,
-        url: "www.howtographql.com",
-        description: "Fullstack tutorial for GraphQL"
-    },
-    {
-        id: 2,
-        url: "graphql.org",
-        description: "GraphQL official website",
-    },
-];
 
 export const LinkQuery = extendType({ // extending root type Query and adding root field called feed
     type: "Query", // the root type being extended
@@ -31,27 +19,30 @@ export const LinkQuery = extendType({ // extending root type Query and adding ro
         t.nonNull.list.nonNull.field("feed", { // "feed" is new root field. non nullable array of link type objects
             type: "Link", // type of objects in field
             resolve(parent, args, context, info) {
-                return links;
+                return context.prisma.link.findMany();
             },
         });
-    },
-});
 
-export const SingleLinkQuery = extendType({
-    type: "Query",
-    definition(t) {
-        t.field("link", {
+        t.nonNull.field("link", {
             type: "Link",
             description: "A Single Link",
             args: {
                 id: "Int"
             },
-            resolve(parent, args): MaybePromise<any> {
-                return links.find(link => link.id === args.id)
+            resolve(parent, args, context): MaybePromise<any> {
+                const link = context.prisma.link.findUnique({
+                    where: {
+                        id: Number(args.id)
+                    }
+                })
+                return link
             }
         })
-    }
-})
+    },
+
+
+});
+
 
 export const LinkMutation = extendType({
     type: "Mutation",
@@ -64,16 +55,13 @@ export const LinkMutation = extendType({
             },
 
             resolve(parent, args, context) {
-                const { description, url } = args;
-
-                let idCount = links.length + 1;
-                const link = {
-                    id: idCount,
-                    description: description,
-                    url: url,
-                };
-                links.push(link);
-                return link;
+                const newLink = context.prisma.link.create({
+                    data: {
+                        description: args.description,
+                        url: args.url
+                    },
+                });
+                return newLink
             },
         });
         t.nonNull.field("update", {
@@ -84,15 +72,18 @@ export const LinkMutation = extendType({
                 url: stringArg()
             },
             resolve(parent, args, context): MaybePromise<any> {
-                const { id, description, url} = args;
-                const originalLink = links.find(link => id === link.id);
-                if (description){
-                    originalLink!.description = description;
-                }
-                if (url) {
-                    originalLink!.url = url;
-                }
-                return originalLink
+
+                const updatedLink = context.prisma.link.update({
+                    where: {
+                        id: Number(args.id),
+                    },
+                    data: {
+                        description: String(args.description),
+                        url: String(args.url)
+                    }
+                })
+                return updatedLink
+
 
             }
         });
@@ -103,14 +94,13 @@ export const LinkMutation = extendType({
                 description: stringArg(),
                 url: stringArg()
             },
-            resolve(parent, { id }): MaybePromise<any> {
-                const ID = id;
-                links = links.filter(function(el) { 
-                    return el.id != ID
-                    })
-                return links
-                
-                
+            resolve(parent, args, context): MaybePromise<any> {
+                const link = context.prisma.link.delete({
+                    where: {
+                        id: Number(args.id)
+                    }
+                })
+                return link
             }
         })
     },
