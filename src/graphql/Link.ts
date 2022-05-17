@@ -1,3 +1,4 @@
+import { lexicographicSortSchema } from "graphql";
 import { argsToArgsConfig } from "graphql/type/definition";
 import { extendType, objectType, nonNull, stringArg, intArg, idArg } from "nexus";
 import { MaybePromise } from "nexus/dist/core";
@@ -77,7 +78,40 @@ export const LinkMutation = extendType({
                 return link;
             },
         });
+        t.nonNull.field("update", {
+            type: "Link",
+            args: {
+                id: nonNull(intArg()),
+                description: stringArg(),
+                url: stringArg()
+            },
+            resolve(parent, args, context): MaybePromise<any> {
+                const { id, description, url} = args;
+                const originalLink = links.find(link => id === link.id);
+                if (description){
+                    originalLink!.description = description;
+                }
+                if (url) {
+                    originalLink!.url = url;
+                }
+                return originalLink
+
+            }
+        });
+        t.nonNull.field("delete", {
+            type: "Link",
+            args: {
+                id: nonNull(intArg())
+            },
+            resolve(parent, { id }, context): MaybePromise<any> {
+                links = links.filter(function(el) { 
+                    return el.id != id
+                })
+                return links
+            }
+        })
     },
 });
+
 
 
