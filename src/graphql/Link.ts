@@ -1,4 +1,4 @@
-import { extendType, objectType, nonNull, stringArg, intArg, idArg } from "nexus";
+import { extendType, objectType, nonNull, stringArg, intArg, idArg, nullable } from "nexus";
 import { MaybePromise } from "nexus/dist/core";
 import { resolveImportPath } from "nexus/dist/utils";
 import { NexusGenObjects } from "../../nexus-typegen";
@@ -96,20 +96,20 @@ export const LinkMutation = extendType({
 
             }
         });
-        t.nonNull.field("delete", {
+        t.nonNull.list.nonNull.field("delete", {
             type: "Link",
             args: {
-                id: nonNull(intArg())
+                id: nonNull(intArg()),
+                description: stringArg(),
+                url: stringArg()
             },
             resolve(parent, { id }): MaybePromise<any> {
                 const ID = id;
-                const deletedLink = links.find(link => link.id === id)
-                if (deletedLink) {
-                    links = links.filter(function(el) { 
-                        return el.id != ID
+                links = links.filter(function(el) { 
+                    return el.id != ID
                     })
-                    return deletedLink
-                }
+                return links
+                
                 
             }
         })
