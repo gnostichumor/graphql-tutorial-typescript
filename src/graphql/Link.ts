@@ -1,13 +1,27 @@
-import { extendType, objectType, nonNull, stringArg, intArg, idArg, nullable } from "nexus";
+import { extendType, objectType, inputObjectType, nonNull, stringArg, intArg, enumType, arg, list } from "nexus";
 import { MaybePromise } from "nexus/dist/core";
-import { resolveImportPath } from "nexus/dist/utils";
-import { NexusGenObjects } from "../../nexus-typegen";
+import { Prisma } from "@prisma/client"
+
+export const LinkOrderByInput = inputObjectType({
+    name: "LinkOrderByInput",
+    definition(t) {
+        t.field("description", { type: Sort });
+        t.field("url", { type: Sort });
+        t.field("createdAt", { type: Sort });
+    },
+});
+
+export const Sort = enumType({
+    name: "Sort",
+    members: ["asc", "desc"],
+});
 
 export const Link = objectType({
     name: "Link", // defines name of type
     definition(t) { // inside definition, add diff fields to type
         t.nonNull.int("id"); // type Int named Id
         t.nonNull.string("description"); // type String name description
+        t.nonNull.dateTime("createdAt");
         t.nonNull.string("url"); // type String name url
         t.field("postedBy", {
             type: "User",
@@ -17,6 +31,24 @@ export const Link = objectType({
                     .postedBy();
             },
         });
+        t.nonNull.list.nonNull.field("voters", {
+            type: "User",
+            resolve(parent, args, context) {
+                return context.prisma.link
+                    .findUnique({ where: { id: parent.id } })
+                    .voters();
+            }
+        });
+
+    },
+});
+
+export const Feed = objectType({
+    name: "Feed",
+    definition(t) {
+        t.nonNull.list.nonNull.field("links", { type: "Link" });
+        t.nonNull.int("count");
+        t.id("id");
     },
 });
 
@@ -24,10 +56,41 @@ export const Link = objectType({
 export const LinkQuery = extendType({ // extending root type Query and adding root field called feed
     type: "Query", // the root type being extended
     definition(t) {
-        t.nonNull.list.nonNull.field("feed", { // "feed" is new root field. non nullable array of link type objects
-            type: "Link", // type of objects in field
-            resolve(parent, args, context, info) {
-                return context.prisma.link.findMany();
+        t.nonNull.field("feed", { // "feed" is new root field. non nullable array of link type objects
+            type: "Feed", // type of objects in field
+            args: {
+                filter: stringArg(),
+                skip: intArg(),
+                take: intArg(),
+                orderBy: arg({ type: list(nonNull(LinkOrderByInput)) }),
+            },
+            async resolve(parent, args, context) {
+                const where = args.filter
+                    ? {
+                        OR: [
+                            { description: { contains: args.filter } },
+                            { url: { contains: args.filter } }
+                        ],
+                    }
+                    : {};
+
+                const links = await context.prisma.link.findMany({
+                    where,
+                    skip: args?.skip as number | undefined,
+                    take: args?.take as number | undefined,
+                    orderBy: args?.orderBy as
+                        | Prisma.Enumerable<Prisma.LinkOrderByWithRelationInput>
+                        | undefined,
+                });
+
+                const count = await context.prisma.link.count({ where });
+                const id = `main-feed:${JSON.stringify(args)}`;
+
+                return {
+                    links,
+                    count,
+                    id,
+                };
             },
         });
 
@@ -37,8 +100,8 @@ export const LinkQuery = extendType({ // extending root type Query and adding ro
             args: {
                 id: "Int"
             },
-            resolve(parent, args, context): MaybePromise<any> {
-                const link = context.prisma.link.findUnique({
+            async resolve(parent, args, context): Promise<any> {
+                const link = await context.prisma.link.findUnique({
                     where: {
                         id: Number(args.id)
                     }
