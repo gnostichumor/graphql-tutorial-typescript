@@ -8,3 +8,7 @@
 /npmDist
 /denoDist
 /websiteDist
+node_modules
+.env
+.vscode
+dist
